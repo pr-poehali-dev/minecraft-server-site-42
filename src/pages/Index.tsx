@@ -25,39 +25,13 @@ const particles = Array.from({ length: 12 }, (_, i) => ({
   delay: `${Math.random() * 6}s`,
 }));
 
-const BIOMES: { x: number; y: number; w: number; h: number; color: string; label: string; emoji: string }[] = [
-  { x: 5, y: 5, w: 28, h: 22, color: "rgba(34,100,50,0.75)", label: "Дремучий лес", emoji: "🌲" },
-  { x: 35, y: 5, w: 20, h: 18, color: "rgba(200,170,80,0.7)", label: "Пустыня Забытых", emoji: "🏜️" },
-  { x: 57, y: 5, w: 18, h: 14, color: "rgba(100,160,220,0.65)", label: "Морской берег", emoji: "🌊" },
-  { x: 77, y: 5, w: 18, h: 30, color: "rgba(160,80,60,0.65)", label: "Вулкан", emoji: "🌋" },
-  { x: 5, y: 30, w: 20, h: 25, color: "rgba(100,140,200,0.6)", label: "Ледяные пики", emoji: "❄️" },
-  { x: 27, y: 26, w: 28, h: 20, color: "rgba(90,60,140,0.7)", label: "Тёмные земли", emoji: "🔮" },
-  { x: 57, y: 21, w: 18, h: 22, color: "rgba(60,140,100,0.65)", label: "Болото духов", emoji: "🌿" },
-  { x: 5, y: 57, w: 22, h: 20, color: "rgba(200,140,60,0.65)", label: "Саванна", emoji: "🦁" },
-  { x: 29, y: 48, w: 24, h: 20, color: "rgba(160,100,200,0.65)", label: "Кристальные пещеры", emoji: "💎" },
-  { x: 55, y: 45, w: 22, h: 22, color: "rgba(80,120,60,0.7)", label: "Древний лес", emoji: "🌳" },
-  { x: 79, y: 37, w: 16, h: 30, color: "rgba(220,180,100,0.6)", label: "Золотые луга", emoji: "🌾" },
-  { x: 5, y: 79, w: 30, h: 16, color: "rgba(60,100,180,0.7)", label: "Океан", emoji: "🐋" },
-  { x: 37, y: 70, w: 20, h: 25, color: "rgba(140,120,80,0.7)", label: "Горное ущелье", emoji: "⛰️" },
-  { x: 59, y: 69, w: 18, h: 26, color: "rgba(200,80,80,0.6)", label: "Руины", emoji: "🏚️" },
-  { x: 79, y: 69, w: 16, h: 26, color: "rgba(70,70,140,0.7)", label: "Пустоши", emoji: "🌑" },
-];
-
-const POI = [
-  { x: 18, y: 16, label: "Спавн", icon: "Home", color: "#f0d080" },
-  { x: 42, y: 14, label: "Рынок", icon: "ShoppingBag", color: "#80d0f0" },
-  { x: 65, y: 30, label: "Арена", icon: "Swords", color: "#f08080" },
-  { x: 35, y: 55, label: "Шахта", icon: "Gem", color: "#c080f0" },
-  { x: 72, y: 75, label: "Замок", icon: "Castle", color: "#f0a060" },
-];
+const MAP_URL = "http://185.9.145.175:26721/";
 
 function MapSection() {
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; emoji: string } | null>(null);
-  const [scanLine, setScanLine] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
   return (
-    <section className="relative z-10 py-20 px-6 max-w-5xl mx-auto">
+    <section className="relative z-10 py-20 px-6 max-w-6xl mx-auto">
       <div className="section-divider mb-20 max-w-xl mx-auto" />
       <div className="text-center mb-12">
         <p className="font-cinzel text-xs tracking-widest mb-3" style={{ color: "var(--purple-mid)" }}>
@@ -70,142 +44,109 @@ function MapSection() {
           Карта Imunns
         </h2>
         <p className="font-rubik text-sm mt-3" style={{ color: "rgba(180,140,220,0.6)" }}>
-          Наведи на биом, чтобы узнать о нём
+          Живая карта сервера — исследуй мир прямо здесь
         </p>
       </div>
 
       <div
-        className="glass-card relative overflow-hidden mx-auto"
+        className="relative mx-auto"
         style={{
-          maxWidth: 760,
-          aspectRatio: "4/3",
-          cursor: "crosshair",
-          background: "rgba(10, 6, 20, 0.85)",
+          borderRadius: 16,
+          overflow: "hidden",
           border: "1px solid rgba(180,120,255,0.3)",
-          boxShadow: "0 0 60px rgba(140,80,220,0.2), inset 0 0 40px rgba(80,40,140,0.15)",
+          boxShadow: "0 0 80px rgba(140,80,220,0.25), 0 0 0 1px rgba(180,120,255,0.1)",
         }}
-        onMouseLeave={() => setTooltip(null)}
       >
-        {/* Grid lines */}
-        <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.07 }}>
-          {Array.from({ length: 11 }, (_, i) => (
-            <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="rgba(180,120,255,1)" strokeWidth="0.5" />
-          ))}
-          {Array.from({ length: 11 }, (_, i) => (
-            <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke="rgba(180,120,255,1)" strokeWidth="0.5" />
-          ))}
-        </svg>
+        {/* Corner decorations */}
+        {[
+          { top: 0, left: 0, borderTop: "2px solid rgba(180,120,255,0.6)", borderLeft: "2px solid rgba(180,120,255,0.6)" },
+          { top: 0, right: 0, borderTop: "2px solid rgba(180,120,255,0.6)", borderRight: "2px solid rgba(180,120,255,0.6)" },
+          { bottom: 0, left: 0, borderBottom: "2px solid rgba(180,120,255,0.6)", borderLeft: "2px solid rgba(180,120,255,0.6)" },
+          { bottom: 0, right: 0, borderBottom: "2px solid rgba(180,120,255,0.6)", borderRight: "2px solid rgba(180,120,255,0.6)" },
+        ].map((s, i) => (
+          <div key={i} className="absolute w-5 h-5 z-10 pointer-events-none" style={s} />
+        ))}
 
-        {/* Biomes */}
-        <svg className="absolute inset-0 w-full h-full">
-          {BIOMES.map((b) => (
-            <rect
-              key={b.label}
-              x={`${b.x}%`} y={`${b.y}%`} width={`${b.w}%`} height={`${b.h}%`}
-              fill={b.color}
-              rx="3"
-              stroke={hovered === b.label ? "rgba(220,180,255,0.9)" : "rgba(180,120,255,0.15)"}
-              strokeWidth={hovered === b.label ? "2" : "1"}
-              style={{ transition: "all 0.2s ease", filter: hovered === b.label ? "brightness(1.3)" : "none" }}
-              onMouseEnter={(e) => {
-                setHovered(b.label);
-                const rect = (e.currentTarget as SVGRectElement).closest("svg")!.getBoundingClientRect();
-                const parent = (e.currentTarget as SVGRectElement).closest(".glass-card")!.getBoundingClientRect();
-                setTooltip({ x: b.x + b.w / 2, y: b.y + b.h / 2, label: b.label, emoji: b.emoji });
-              }}
-              onMouseLeave={() => { setHovered(null); }}
-            />
-          ))}
-
-          {/* Scan line animation */}
-          <line
-            x1="0" y1={`${scanLine}%`} x2="100%" y2={`${scanLine}%`}
-            stroke="rgba(180,120,255,0.4)"
-            strokeWidth="1"
-            style={{ filter: "blur(1px)" }}
-          />
-
-          {/* POI markers */}
-          {POI.map((p) => (
-            <g key={p.label}>
-              <circle cx={`${p.x}%`} cy={`${p.y}%`} r="6" fill="rgba(10,6,20,0.8)" stroke={p.color} strokeWidth="1.5" />
-              <circle cx={`${p.x}%`} cy={`${p.y}%`} r="2.5" fill={p.color} />
-              <circle cx={`${p.x}%`} cy={`${p.y}%`} r="9" fill="none" stroke={p.color} strokeWidth="0.8" strokeOpacity="0.4" />
-            </g>
-          ))}
-
-          {/* Tooltip inside SVG */}
-          {tooltip && (
-            <g>
-              <rect
-                x={`${Math.min(Math.max(tooltip.x - 10, 2), 62)}%`}
-                y={`${Math.min(tooltip.y + 3, 78)}%`}
-                width="120" height="32" rx="6"
-                fill="rgba(20,10,38,0.95)"
-                stroke="rgba(180,120,255,0.5)"
-                strokeWidth="1"
-              />
-              <text
-                x={`${Math.min(Math.max(tooltip.x - 10, 2), 62)}%`}
-                y={`${Math.min(tooltip.y + 3, 78)}%`}
-                dx="10" dy="14"
-                fill="rgba(220,190,255,0.95)"
-                fontSize="11"
-                fontFamily="Rubik, sans-serif"
-              >
-                {tooltip.emoji} {tooltip.label}
-              </text>
-            </g>
-          )}
-        </svg>
-
-        {/* Scan line via CSS animation */}
+        {/* Scan line */}
         <div
-          className="absolute left-0 right-0 pointer-events-none"
+          className="absolute left-0 right-0 z-10 pointer-events-none"
           style={{
             height: "2px",
-            background: "linear-gradient(90deg, transparent, rgba(180,120,255,0.6), transparent)",
-            animation: "map-scan 6s linear infinite",
+            background: "linear-gradient(90deg, transparent, rgba(180,120,255,0.5), transparent)",
+            animation: "map-scan 8s linear infinite",
             top: 0,
           }}
         />
 
-        {/* Corner decorations */}
-        {[
-          { top: 8, left: 8 }, { top: 8, right: 8 },
-          { bottom: 8, left: 8 }, { bottom: 8, right: 8 },
-        ].map((pos, i) => (
+        {/* Loading placeholder */}
+        {!loaded && (
           <div
-            key={i}
-            className="absolute w-4 h-4 pointer-events-none"
-            style={{
-              ...pos,
-              borderTop: i < 2 ? "2px solid rgba(180,120,255,0.5)" : "none",
-              borderBottom: i >= 2 ? "2px solid rgba(180,120,255,0.5)" : "none",
-              borderLeft: i % 2 === 0 ? "2px solid rgba(180,120,255,0.5)" : "none",
-              borderRight: i % 2 === 1 ? "2px solid rgba(180,120,255,0.5)" : "none",
-            }}
-          />
-        ))}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4"
+            style={{ background: "rgba(10,6,20,0.95)" }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                border: "2px solid rgba(180,120,255,0.2)",
+                borderTop: "2px solid rgba(180,120,255,0.8)",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <p className="font-rubik text-sm" style={{ color: "rgba(180,140,220,0.6)" }}>
+              Загрузка карты…
+            </p>
+          </div>
+        )}
 
-        {/* Legend */}
-        <div
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none"
-        >
-          {POI.slice(0, 3).map((p) => (
-            <div key={p.label} className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-              <span className="font-rubik text-xs" style={{ color: "rgba(180,140,220,0.7)" }}>{p.label}</span>
-            </div>
-          ))}
-        </div>
+        <iframe
+          src={MAP_URL}
+          title="Карта сервера Imunns"
+          onLoad={() => setLoaded(true)}
+          style={{
+            width: "100%",
+            height: "600px",
+            border: "none",
+            display: "block",
+            background: "#0a0614",
+          }}
+          allowFullScreen
+        />
 
-        {/* Coords display */}
+        {/* Bottom bar */}
         <div
-          className="absolute top-3 right-3 font-rubik text-xs pointer-events-none"
-          style={{ color: "rgba(155,108,212,0.7)", fontVariantNumeric: "tabular-nums" }}
+          className="flex items-center justify-between px-4 py-2.5"
+          style={{
+            background: "rgba(10,6,20,0.9)",
+            borderTop: "1px solid rgba(180,120,255,0.15)",
+          }}
         >
-          10000 × 10000
+          <div className="flex items-center gap-2">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: loaded ? "#7aefa0" : "rgba(180,120,255,0.5)",
+                boxShadow: loaded ? "0 0 6px #7aefa0" : "none",
+                animation: loaded ? "glow-pulse 2s ease-in-out infinite" : "none",
+              }}
+            />
+            <span className="font-rubik text-xs" style={{ color: "rgba(180,140,220,0.6)" }}>
+              {loaded ? "Карта загружена" : "Подключение…"}
+            </span>
+          </div>
+          <a
+            href={MAP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 font-rubik text-xs"
+            style={{ color: "rgba(180,120,255,0.7)", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(200,160,255,1)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(180,120,255,0.7)")}
+          >
+            <Icon name="ExternalLink" size={12} />
+            Открыть на весь экран
+          </a>
         </div>
       </div>
     </section>
